@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo e Jogo da Memória</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background-color: #f8f8f8; text-align: center; }
+    table { width: 85%; margin: 20px auto; border-collapse: collapse; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #999; padding: 10px; text-align: center; }
+    th { background-color: #e0e0e0; }
+    .acima-media { background-color: #c7ffd4; font-weight: bold; }
+    .mais-caro { background-color: #ffc9c9; font-style: italic; }
+    .mais-barato { background-color: #c9d9ff; text-decoration: underline; }
+    .resumo { margin-top: 30px; font-size: 1.1em; background-color: #fff; padding: 15px; border-radius: 8px; display: inline-block; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .resumo p { margin: 10px 0; }
+    .error { color: #b00020; font-weight: bold; font-size: 1.2em; }
+
+    .memory-board {
+      display: grid;
+      grid-template-columns: repeat(4, 90px);
+      gap: 12px;
+      justify-content: center;
+      margin: 40px auto;
+    }
+    .card {
+      width: 90px;
+      height: 90px;
+      background-color: #dcdcdc;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 0;
+      transition: transform 0.3s ease;
+    }
+    .card.revealed span {
+      display: block;
+    }
+    .card span {
+      display: none;
+      font-size: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Catálogo de Produtos</h1>
+  <div id="resultado"></div>
+
+  <h2>Jogo da Memória com Emojis</h2>
+  <div class="memory-board" id="memory-board"></div>
+
+  <script>
+    function simularRequisicao() {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const numeroAleatorio = Math.floor(Math.random() * 100);
+          if (numeroAleatorio % 2 === 0) {
+            const produtos = Array.from({ length: 10 }, (_, i) => ({
+              id: i + 1,
+              nome: `Item ${i + 1}`,
+              tipo: `Categoria ${String.fromCharCode(65 + (i % 4))}`,
+              preco: parseFloat((Math.random() * 120 + 30).toFixed(2))
+            }));
+            resolve(produtos);
+          } else {
+            reject({ res: "ERROR", msg: "ERRO NO SISTEMA" });
+          }
+        }, 4000);
+      });
+    }
+
+    async function carregarProdutos() {
+      const container = document.getElementById("resultado");
+      try {
+        const produtos = await simularRequisicao();
+        let total = produtos.reduce((acc, p) => acc + p.preco, 0);
+        const media = total / produtos.length;
+        let maisCaro = produtos.reduce((a, b) => a.preco > b.preco ? a : b);
+        let maisBarato = produtos.reduce((a, b) => a.preco < b.preco ? a : b);
+
+        let tabela = `<table><thead><tr><th>ID</th><th>Nome</th><th>Tipo</th><th>Preço</th></tr></thead><tbody>`;
+        produtos.forEach(p => {
+          let classe = "";
+          if (p.preco > media) classe += " acima-media";
+          if (p.id === maisCaro.id) classe += " mais-caro";
+          if (p.id === maisBarato.id) classe += " mais-barato";
+          tabela += `<tr class="${classe}"><td>${p.id}</td><td>${p.nome}</td><td>${p.tipo}</td><td>R$ ${p.preco.toFixed(2)}</td></tr>`;
+        });
+        tabela += `</tbody></table>`;
+
+        tabela += `
+          <div class="resumo">
+            <p><strong>Média dos Preços:</strong> R$ ${media.toFixed(2)}</p>
+            <p><strong>Produto Mais Caro:</strong> ${maisCaro.nome} - R$ ${maisCaro.preco.toFixed(2)}</p>
+            <p><strong>Produto Mais Barato:</strong> ${maisBarato.nome} - R$ ${maisBarato.preco.toFixed(2)}</p>
+          </div>
+        `;
+
+        container.innerHTML = tabela;
+      } catch (erro) {
+        container.innerHTML = `<p class="error">${erro.msg}</p>`;
+      }
+    }
+
+    carregarProdutos();
+
+
+    
+    const emojis = ['🍄','🍕','🍩','🍪','🍫','🍉','🍍','🍎'];
+    const pares = [...emojis, ...emojis].sort(() => Math.random() - 0.5);
+    const board = document.getElementById("memory-board");
+    let primeiro = null;
+    let segundo = null;
+    let bloqueado = false;
+    let acertos = 0;
+
+    pares.forEach((emoji, index) => {
+      const carta = document.createElement("div");
+      carta.classList.add("card");
+      carta.dataset.valor = emoji;
+
+      const span = document.createElement("span");
+      span.textContent = emoji;
+      carta.appendChild(span);
+
+      carta.addEventListener("click", () => {
+        if (bloqueado || carta.classList.contains("revealed")) return;
+
+        carta.classList.add("revealed");
+        span.style.display = "block";
+
+        if (!primeiro) {
+          primeiro = carta;
+        } else {
+          segundo = carta;
+          bloqueado = true;
+
+          if (primeiro.dataset.valor === segundo.dataset.valor) {
+            acertos++;
+            primeiro = null;
+            segundo = null;
+            bloqueado = false;
+            if (acertos === emojis.length) {
+              setTimeout(() => alert("Você venceu! Todos os pares foram encontrados!"), 400);
+            }
+          } else {
+            setTimeout(() => {
+              primeiro.classList.remove("revealed");
+              segundo.classList.remove("revealed");
+              primeiro.querySelector("span").style.display = "none";
+              segundo.querySelector("span").style.display = "none";
+              primeiro = null;
+              segundo = null;
+              bloqueado = false;
+            }, 800);
+          }
+        }
+      });
+
+      board.appendChild(carta);
+    });
+  </script>
+</body>
+</html>

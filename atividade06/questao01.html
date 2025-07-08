@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Verdana, sans-serif; padding: 20px; background-color: #fdfdfd; text-align: center; }
+    table { width: 80%; margin: 20px auto; border-collapse: collapse; }
+    th, td { border: 1px solid #bbb; padding: 10px; text-align: center; }
+    th { background-color: #eaeaea; }
+    .acima-media { background-color: #e0ffe0; font-weight: bold; }
+    .mais-caro { background-color: #ffe0e0; font-style: italic; }
+    .mais-barato { background-color: #e0e0ff; text-decoration: underline; }
+    .resumo { margin-top: 30px; font-size: 1.1em; }
+    .resumo p { margin: 8px 0; }
+    .error { color: crimson; font-weight: bold; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <h1>Catálogo de Produtos Gerado</h1>
+  <div id="resultado"></div>
+  <script>
+    function simularRequisicao() {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const numeroSorteado = Math.floor(Math.random() * 100);
+          if (numeroSorteado % 2 === 0) {
+            const listaProdutos = Array.from({ length: 10 }, (_, index) => ({
+              id: index + 1,
+              nome: `Item ${index + 1}`,
+              tipo: `Categoria ${index % 4}`,
+              preco: parseFloat((Math.random() * 150 + 10).toFixed(2))
+            }));
+            resolve(listaProdutos);
+          } else {
+            reject({ res: "ERROR", msg: "ERRO NO SISTEMA" });
+          }
+        }, 4000);
+      });
+    }
+
+    async function carregarProdutos() {
+      const container = document.getElementById("resultado");
+      try {
+        const produtos = await simularRequisicao();
+        let soma = 0;
+        let maisCaro = produtos[0];
+        let maisBarato = produtos[0];
+
+        produtos.forEach(p => {
+          soma += p.preco;
+          if (p.preco > maisCaro.preco) maisCaro = p;
+          if (p.preco < maisBarato.preco) maisBarato = p;
+        });
+
+        const media = soma / produtos.length;
+
+        let tabelaHTML = `<table><thead><tr><th>ID</th><th>Nome</th><th>Tipo</th><th>Preço</th></tr></thead><tbody>`;
+        produtos.forEach(p => {
+          let classe = "";
+          if (p.preco > media) classe += " acima-media";
+          if (p.id === maisCaro.id) classe += " mais-caro";
+          if (p.id === maisBarato.id) classe += " mais-barato";
+          tabelaHTML += `<tr class="${classe}"><td>${p.id}</td><td>${p.nome}</td><td>${p.tipo}</td><td>R$ ${p.preco.toFixed(2)}</td></tr>`;
+        });
+        tabelaHTML += `</tbody></table>`;
+
+        tabelaHTML += `
+          <div class="resumo">
+            <p><strong>Preço Médio:</strong> R$ ${media.toFixed(2)}</p>
+            <p><strong>Mais Caro:</strong> ${maisCaro.nome} - R$ ${maisCaro.preco.toFixed(2)}</p>
+            <p><strong>Mais Barato:</strong> ${maisBarato.nome} - R$ ${maisBarato.preco.toFixed(2)}</p>
+          </div>
+        `;
+
+        container.innerHTML = tabelaHTML;
+      } catch (erro) {
+        container.innerHTML = `<p class="error">${erro.msg}</p>`;
+      }
+    }
+
+    carregarProdutos();
+  </script>
+</body>
+</html>
